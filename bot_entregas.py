@@ -1,7 +1,6 @@
 import os
 import tempfile
 import dropbox
-import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
 
@@ -83,18 +82,18 @@ async def receber_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     )
 
+import asyncio
+
+async def notificar_inicio():
+    await app.bot.send_message(
+        chat_id=MEU_CHAT_ID,
+        text="🟢 Bot iniciado e rodando!"
+    )
+
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(MessageHandler(filters.PHOTO, receber_foto))
     print("🤖 Bot rodando...")
     print("-" * 40)
-        async def notificar_inicio():
-        await app.bot.send_message(
-            chat_id=MEU_CHAT_ID,
-            text="🟢 Bot iniciado e rodando!"
-        )
-
-    import asyncio
     asyncio.run(notificar_inicio())
-    
     app.run_polling()
