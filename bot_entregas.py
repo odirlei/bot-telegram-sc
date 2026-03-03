@@ -84,16 +84,17 @@ async def receber_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 import asyncio
 
-async def notificar_inicio():
-    await app.bot.send_message(
-        chat_id=MEU_CHAT_ID,
-        text="🟢 Bot iniciado e rodando!"
-    )
-
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(MessageHandler(filters.PHOTO, receber_foto))
+    
+    async def pos_inicio(app):
+        await app.bot.send_message(
+            chat_id=MEU_CHAT_ID,
+            text="🟢 Bot iniciado e rodando!"
+        )
+    
+    app.post_init = pos_inicio
     print("🤖 Bot rodando...")
     print("-" * 40)
-    asyncio.run(notificar_inicio())
     app.run_polling()
