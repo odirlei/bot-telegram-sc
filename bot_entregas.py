@@ -1,19 +1,35 @@
-import os, tempfile, json, dropbox
+import os
+import tempfile
+import json
+import dropbox
+from dropbox.oauth import DropboxOAuth2FlowNoRedirect
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
 
+# 🔐 Tokens das variáveis de ambiente
 TOKEN = os.environ["TOKEN"]
 MEU_CHAT_ID = os.environ["MEU_CHAT_ID"]
-DROPBOX_TOKEN = os.environ["DROPBOX_TOKEN"]
+DROPBOX_APP_KEY = os.environ["DROPBOX_APP_KEY"]
+DROPBOX_APP_SECRET = os.environ["DROPBOX_APP_SECRET"]
+DROPBOX_REFRESH_TOKEN = os.environ["DROPBOX_REFRESH_TOKEN"]
+
+# 📁 Caminhos no Dropbox
 PASTA_DROPBOX = "/Fotos Residências"
 JSON_DROPBOX = "/Fotos Residências/Json/recibos_export.json"
+
+def get_dropbox():
+    """Cria conexão com Dropbox usando Refresh Token (nunca expira)"""
+    return dropbox.Dropbox(
+        app_key=DROPBOX_APP_KEY,
+        app_secret=DROPBOX_APP_SECRET,
+        oauth2_refresh_token=DROPBOX_REFRESH_TOKEN
+    )
 
 def carregar_recibos(dbx):
     """Baixa e lê o JSON de recibos do Dropbox"""
     try:
         _, res = dbx.files_download(JSON_DROPBOX)
         dados = json.loads(res.content)
-        # Transforma em dicionário {codigo: tentativas}
         return {str(item["codigo"]): int(item["tentativas"]) for item in dados}
     except Exception as e:
         print(f"Erro ao carregar recibos: {e}")
@@ -44,9 +60,9 @@ async def receber_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❗ A legenda deve conter apenas o número do recibo.")
         return
 
-    dbx = dropbox.Dropbox(DROPBOX_TOKEN)
+    dbx = get_dropbox()
 
-    # ✅ CONSULTA O JSON DO ACCESS
+    # ✅ Consulta o JSON gerado pelo Access
     recibos = carregar_recibos(dbx)
 
     if recibos is None:
@@ -65,7 +81,7 @@ async def receber_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # 📁 SALVA FOTO NO DROPBOX
+    # 📁 Define nome do arquivo
     nome_primeira = f"{numero}.jpg"
     nome_segunda = f"{numero}(1).jpg"
 
@@ -79,6 +95,7 @@ async def receber_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"⚠️ Recibo {numero} já possui 2 tentativas registradas.")
         return
 
+    # 📥 Baixa e envia foto pro Dropbox
     foto = update.message.photo[-1]
     file = await context.bot.get_file(foto.file_id)
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
@@ -113,7 +130,10 @@ if __name__ == "__main__":
     app.add_handler(MessageHandler(filters.PHOTO, receber_foto))
 
     async def pos_inicio(app):
-        await app.bot.send_message(chat_id=MEU_CHAT_ID, text="🟢 Bot iniciado e rodando!")
+        await app.bot.send_message(
+            chat_id=MEU_CHAT_ID,
+            text="🟢 Bot iniciado e rodando!"
+        )
 
     app.post_init = pos_inicio
     print("🤖 Bot rodando...")
