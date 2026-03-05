@@ -35,12 +35,6 @@ def carregar_recibos(dbx):
         print(f"Erro ao carregar recibos: {e}")
         return None
 
-def arquivo_existe_dropbox(dbx, nome):
-    try:
-        dbx.files_get_metadata(f"{PASTA_DROPBOX}/{nome}")
-        return True
-    except dropbox.exceptions.ApiError:
-        return False
 
 def upload_dropbox(dbx, caminho_local, nome_arquivo):
     with open(caminho_local, "rb") as f:
@@ -81,15 +75,12 @@ async def receber_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # 📁 Define nome do arquivo
-    nome_primeira = f"{numero}.jpg"
-    nome_segunda = f"{numero}(1).jpg"
-
-    if not arquivo_existe_dropbox(dbx, nome_primeira):
-        nome_final = nome_primeira
+    # 📁 Define nome do arquivo baseado nas tentativas do JSON
+    if tentativas_anteriores == 0:
+        nome_final = f"{numero}.jpg"
         tentativa_atual = "1ª tentativa"
-    elif not arquivo_existe_dropbox(dbx, nome_segunda):
-        nome_final = nome_segunda
+    elif tentativas_anteriores == 1:
+        nome_final = f"{numero}(1).jpg"
         tentativa_atual = "2ª tentativa"
     else:
         await update.message.reply_text(f"⚠️ Recibo {numero} já possui 2 tentativas registradas.")
